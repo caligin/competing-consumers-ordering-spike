@@ -14,7 +14,7 @@
     ((keyword command)
         ((keyword current-state)
         {:init {:create :edit}
-         :edit {:update :edit :done :closed}
+         :edit {:update :edit :close :closed}
          :closed {}
         })))
 
