@@ -1,4 +1,4 @@
-.PHONY: run-containers kill-containers
+.PHONY: run-containers kill-containers clean-mongo shell-mongo
 
 run-containers:
 	docker run -p 27017:27017 --name spike-mongo -d mongo:3.2
@@ -10,3 +10,8 @@ kill-containers:
 	docker stop spike-rabbit
 	docker rm spike-rabbit
 
+clean-mongo:
+	docker exec spike-mongo mongo things --eval 'db.things.drop()'
+
+shell-mongo:
+	docker exec -ti spike-mongo mongo things
