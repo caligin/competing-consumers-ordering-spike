@@ -8,8 +8,7 @@
             [langohr.basic     :as lb]
             [monger.core :as mg]
             [monger.collection :as mc])
-  (:import [com.mongodb MongoOptions ServerAddress]))
-
+  (:import [com.mongodb MongoOptions ServerAddress]))   
 
 (defn next-state [current-state command]
     ((keyword command)
@@ -40,6 +39,7 @@
         mongo   (mg/get-db mconn "things")]
     (println (format "Consumer Connected. Channel id: %d" (.getChannelNumber ch)))
     (lq/declare ch qname {:exclusive false :auto-delete true})
+    (lq/bind    ch qname "things" {:routing-key "events.for.*"})
     (lc/subscribe ch qname (make-message-handler mongo) {:auto-ack true})
     (Thread/sleep 60000)
     (println "Closing")

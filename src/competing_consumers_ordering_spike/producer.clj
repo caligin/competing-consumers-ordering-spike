@@ -15,12 +15,11 @@
   "Producer"
   [& args]
   (let [conn  (rmq/connect)
-        ch    (lch/open conn)
-        qname "needsordering"]
+        ch    (lch/open conn)]
     (println (format "Producer Connected. Channel id: %d" (.getChannelNumber ch)))
-
+    (le/declare ch "things" "topic" {:durable true :auto-delete false})
     (doseq [body (mapcat gen-events (range 9999))]
-      (lb/publish ch "" qname body {:type "greetings.hi" :content-type "text/plain"}))
+      (lb/publish ch "things" "events.for.things" body {:type "greetings.hi" :content-type "text/plain"}))
 
     (rmq/close ch)
     (rmq/close conn)))
