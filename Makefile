@@ -18,6 +18,7 @@ shell-mongo:
 
 query-for-nonbroken-mongo:
 	docker exec spike-mongo mongo things --eval  'db.things.find({state: {$$ne: "fuckedup"}}).forEach(printjson)'
+	docker exec spike-mongo mongo things --eval  'db.things.find({state: {$$ne: "fuckedup"}}).count()'
 
 rabbitmqadmin:
 	wget http://localhost:8080/cli/rabbitmqadmin
