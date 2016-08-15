@@ -27,3 +27,12 @@ rabbitmqadmin:
 things-exchange: rabbitmqadmin
 	./rabbitmqadmin -P 8080 declare exchange name=things type=topic
 
+enable-hash-plugin:
+	docker exec spike-rabbit rabbitmq-plugins enable rabbitmq_consistent_hash_exchange
+
+hash-exchange: rabbitmqadmin
+	./rabbitmqadmin -P 8080 declare exchange name=hash type=x-consistent-hash arguments='{"hash-header":"hashid"}'
+
+# how do I declare dependencies for this stuff?
+hash-exchange-bind:
+	./rabbitmqadmin -P 8080 declare binding source=things destination=hash routing_key="events.for.*" destination_type="exchange" 

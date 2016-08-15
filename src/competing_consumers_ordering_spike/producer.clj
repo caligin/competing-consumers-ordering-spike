@@ -9,7 +9,10 @@
             [clojure.pprint :as pp]))
 
 (defn gen-events [id]
-  (map (partial str id ":") '("create" "update" "update" "update" "update" "close")))
+  (map (partial list id) '("create" "update" "update" "update" "update" "close")))
+
+(defn make-body [[evid evtype]]
+  (str evid ":" evtype))
 
 (defn -main
   "Producer"
@@ -18,8 +21,9 @@
         ch    (lch/open conn)]
     (println (format "Producer Connected. Channel id: %d" (.getChannelNumber ch)))
     (le/declare ch "things" "topic" {:durable true :auto-delete false})
-    (doseq [body (mapcat gen-events (range 9999))]
-      (lb/publish ch "things" "events.for.things" body {:type "greetings.hi" :content-type "text/plain"}))
+    (doseq [ev (mapcat gen-events (range 9999))]
+      (let [[evid _] ev]
+        (lb/publish ch "things" "events.for.things" (make-body ev) {:type "greetings.hi" :content-type "text/plain" :headers {"hashid" (str evid)}})))
 
     (rmq/close ch)
     (rmq/close conn)))

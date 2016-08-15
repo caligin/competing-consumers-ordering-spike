@@ -34,12 +34,12 @@
   [& args]
   (let [conn  (rmq/connect)
         ch    (lch/open conn)
-        qname "needsordering"
+        qname (str "needsordering" (java.util.UUID/randomUUID))
         mconn (mg/connect)
         mongo   (mg/get-db mconn "things")]
     (println (format "Consumer Connected. Channel id: %d" (.getChannelNumber ch)))
     (lq/declare ch qname {:exclusive false :auto-delete true})
-    (lq/bind    ch qname "things" {:routing-key "events.for.*"})
+    (lq/bind    ch qname "hash" {:routing-key "20"})
     (lc/subscribe ch qname (make-message-handler mongo) {:auto-ack true})
     (Thread/sleep 60000)
     (println "Closing")
