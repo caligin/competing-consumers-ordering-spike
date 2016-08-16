@@ -50,3 +50,7 @@ hash-exchange: rabbitmqadmin
 # how do I declare dependencies for this stuff?
 hash-exchange-bind:
 	./rabbitmqadmin -P 8080 declare binding source=things destination=hash routing_key="events.for.*" destination_type="exchange" 
+
+lock-queue:
+	./rabbitmqadmin -P 8080 declare queue name=lock durable=true
+	./rabbitmqadmin -P 8080 publish routing_key=lock payload=ohai

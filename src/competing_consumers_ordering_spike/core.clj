@@ -9,7 +9,10 @@
             [monger.core :as mg]
             [monger.collection :as mc]
             [clojure.repl])
-  (:import [com.mongodb MongoOptions ServerAddress]))   
+  (:import [com.mongodb MongoOptions ServerAddress]
+           [com.rabbitmq.client QueueingConsumer]))   
+
+
 
 (defn next-state [current-state command]
     ((keyword command)
@@ -35,18 +38,26 @@
     (clojure.repl/set-break-handler! (fn [_] (deliver barrier nil)))
     barrier))
 
+(defn acquire-lock [conn]
+  (let [channel        (lch/open conn)
+        lockqname "lock"
+        consumer (QueueingConsumer. channel)]
+          (println "acquiring lock")
+          (lb/consume channel lockqname consumer)
+          (doall (take 1 (lc/deliveries-seq consumer)))
+          (println "lock acquired")))
 
 (defn -main
   "Consumer"
   [& args]
   (let [conn  (rmq/connect)
         ch    (lch/open conn)
-        qname (str "needsordering" (java.util.UUID/randomUUID))
+        qname "needsordering"
         mconn (mg/connect)
         mongo   (mg/get-db mconn "things")]
-    (println (format "Consumer Connected. Channel id: %d" (.getChannelNumber ch)))
+    (acquire-lock conn)
     (lq/declare ch qname {:exclusive false :auto-delete true})
-    (lq/bind    ch qname "hash" {:routing-key "20"})
+    (lq/bind    ch qname "things" {:routing-key "events.for.*"})
     (lc/subscribe ch qname (make-message-handler mongo) {:auto-ack true})
     @(make-exit-barrier)
     (println "Closing")
