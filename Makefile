@@ -1,4 +1,18 @@
-.PHONY: run stop run-containers stop-containers clean-mongo shell-mongo
+JAR=target/uberjar/competing-consumers-ordering-spike-0.1.0-SNAPSHOT-standalone.jar
+
+
+.PHONY: run stop run-containers stop-containers clean-mongo shell-mongo jar consumer
+
+$(JAR): src/competing_consumers_ordering_spike/core.clj src/competing_consumers_ordering_spike/producer.clj
+	lein uberjar
+
+jar: $(JAR)
+
+consumer: $(JAR)
+	java -jar $<
+
+producer: $(JAR)
+	java -cp $< competing_consumers_ordering_spike.producer
 
 run-containers:
 	docker run -p 27017:27017 --name spike-mongo -d mongo:3.2

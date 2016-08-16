@@ -7,7 +7,8 @@
             [langohr.consumers :as lc]
             [langohr.basic     :as lb]
             [monger.core :as mg]
-            [monger.collection :as mc])
+            [monger.collection :as mc]
+            [clojure.repl])
   (:import [com.mongodb MongoOptions ServerAddress]))   
 
 (defn next-state [current-state command]
@@ -29,6 +30,12 @@
       (let [[id, command] (clojure.string/split (String. payload "UTF-8") #":")]
         (update-state mongo id (or (next-state (load-state mongo id) command) :fuckedup)))))
 
+(defn make-exit-barrier []
+  (let [barrier (promise)]
+    (clojure.repl/set-break-handler! (fn [_] (deliver barrier nil)))
+    barrier))
+
+
 (defn -main
   "Consumer"
   [& args]
@@ -41,7 +48,7 @@
     (lq/declare ch qname {:exclusive false :auto-delete true})
     (lq/bind    ch qname "hash" {:routing-key "20"})
     (lc/subscribe ch qname (make-message-handler mongo) {:auto-ack true})
-    (Thread/sleep 60000)
+    @(make-exit-barrier)
     (println "Closing")
     (rmq/close ch)
     (rmq/close conn)
