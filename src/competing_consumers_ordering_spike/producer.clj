@@ -6,6 +6,7 @@
             [langohr.exchange  :as le]
             [langohr.consumers :as lc]
             [langohr.basic     :as lb]
+            [langohr.confirm :as lcf]
             [clojure.pprint :as pp]))
 
 (defn gen-events [id]
@@ -20,10 +21,11 @@
   (let [conn  (rmq/connect)
         ch    (lch/open conn)]
     (println (format "Producer Connected. Channel id: %d" (.getChannelNumber ch)))
+    (lcf/select ch)
     (le/declare ch "things" "topic" {:durable true :auto-delete false})
     (doseq [ev (mapcat gen-events (range 9999))]
       (let [[evid _] ev]
-        (lb/publish ch "things" "events.for.things" (make-body ev) {:type "greetings.hi" :content-type "text/plain" :headers {"hashid" (str evid)}})))
-
+        (lb/publish ch "things" "events.for.things" (make-body ev) {:type "greetings.hi" :content-type "text/plain" :headers {"hashid" (str evid)} :persistent 2})))
+    (lcf/wait-for-confirms ch)
     (rmq/close ch)
     (rmq/close conn)))

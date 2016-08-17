@@ -1,7 +1,7 @@
 JAR=target/uberjar/competing-consumers-ordering-spike-0.1.0-SNAPSHOT-standalone.jar
 
 
-.PHONY: run stop run-containers stop-containers clean-mongo shell-mongo jar consumer
+.PHONY: run stop run-containers stop-containers clean-mongo shell-mongo jar consumer reap
 
 $(JAR): src/competing_consumers_ordering_spike/core.clj src/competing_consumers_ordering_spike/producer.clj
 	lein uberjar
@@ -54,3 +54,6 @@ hash-exchange-bind:
 lock-queue:
 	./rabbitmqadmin -P 8080 declare queue name=lock durable=true
 	./rabbitmqadmin -P 8080 publish routing_key=lock payload=ohai
+
+reap:
+	bash reaper.sh

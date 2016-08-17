@@ -10,7 +10,8 @@
             [monger.collection :as mc]
             [clojure.repl])
   (:import [com.mongodb MongoOptions ServerAddress]
-           [com.rabbitmq.client QueueingConsumer]))   
+           [com.rabbitmq.client QueueingConsumer]
+           com.mongodb.WriteConcern))   
 
 
 
@@ -31,7 +32,9 @@
 (defn make-message-handler [mongo]
   (fn [ch {:keys [content-type delivery-tag type] :as meta} ^bytes payload]
       (let [[id, command] (clojure.string/split (String. payload "UTF-8") #":")]
-        (update-state mongo id (or (next-state (load-state mongo id) command) :fuckedup)))))
+        (if (= "create" command) (println (str "id " id)))
+        (update-state mongo id (or (next-state (load-state mongo id) command) :fuckedup))
+        (lb/ack ch delivery-tag))))
 
 (defn make-exit-barrier []
   (let [barrier (promise)]
@@ -55,12 +58,16 @@
         qname "needsordering"
         mconn (mg/connect)
         mongo   (mg/get-db mconn "things")]
+    (mg/set-default-write-concern! WriteConcern/JOURNALED)
+    (rmq/add-shutdown-listener conn (fn [_] (println "SHADDAUN")))
     (acquire-lock conn)
-    (lq/declare ch qname {:exclusive false :auto-delete true})
+    (lb/qos ch 1)
+    (lq/declare ch qname {:durable true :auto-delete false})
     (lq/bind    ch qname "things" {:routing-key "events.for.*"})
-    (lc/subscribe ch qname (make-message-handler mongo) {:auto-ack true})
-    @(make-exit-barrier)
-    (println "Closing")
-    (rmq/close ch)
-    (rmq/close conn)
-    (mg/disconnect mconn)))
+    (let [consumertag (lc/subscribe ch qname (make-message-handler mongo) {})]
+      @(make-exit-barrier)
+      (println "Closing")
+      (lb/cancel ch consumertag)
+      (rmq/close ch)
+      (rmq/close conn)
+      (mg/disconnect mconn))))
